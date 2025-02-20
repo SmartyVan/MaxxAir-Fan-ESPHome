@@ -1,8 +1,8 @@
 # MaxxAir Fan Control in Home Assistant via ESPHome using IR
-Control your IR (infrared) enabled MaxxAir Fan from Home Assistant via ESPHome
+Control your [IR (infrared) enabled MaxxAir Fan](https://amzn.to/4gPCY9p) from Home Assistant via ESPHome
 
 This project is made up of two parts:
-1. **ESPHome YAML configuration:** for an ESP microcontroller that utilizes an IR LED to control an Airxcel MaxxAir Fan with IR (7000k/7500k models).
+1. **ESPHome YAML configuration:** for an ESP microcontroller that utilizes an IR LED to control an Airxcel MaxxAir Fan with IR ([7000k/7500k models](https://amzn.to/4gPCY9p)).
 2. **Home Assistant Automation Blueprint:** to enable Auto Fan and set your preferences
 
 ### Home Assistant Entities
