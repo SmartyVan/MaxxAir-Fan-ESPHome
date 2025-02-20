@@ -40,17 +40,17 @@ The ESPHome YAML logic manages the states of all four entities based on user inp
 ## Auto Fan
 The Auto Fan Automation Blueprint imitates (and improves) the MaxxAir IR remote's thermostatic control. When Auto Fan is enabled, your fan's speed will be adjusted based on configurable temperature thresholds, minimum and maximum fan speeds, and a temperature sensor of your choosing.
 
-Auto Fan never turns your fan off, only assigns speeds based on temperature. Turn off the Fan or Auto Fan to turn power off the Fan.
+Auto Fan never turns your fan off, only assigns speeds based on temperature. Turn off the Fan or Auto Fan to power off the Fan.
 
 *The Auto Fan Automation Blueprint can be used with any Home Assistant fan, though it will only send 10 speeds (10%, 20%, 30%, etc)*
 
 # Hardware
 
 Building your ESP device requires four items:
-- ESP8266 (or ESP32)——This configuration assumes a Wemos D1 Mini but any ESP8266/32 should work (as long as you update pin asignments accordingly)
-- An IR LED
-- A 220Ω resistor
-- A 5v power supply for your ESP——I've used a 12v to 5v down converter
+- ESP8266 (or ESP32)——This configuration assumes a [Wemos D1 Mini](https://amzn.to/4177tBZ) but any ESP8266/32 should work (as long as you update pin asignments accordingly)
+- An [IR LED](https://amzn.to/3Dd07oq)
+- A [220Ω resistor](https://amzn.to/4gQCPmh)
+- A 5v power supply for your ESP——I've used a [12v to 5v down converter](https://amzn.to/4gLhs5T)
 
 ## Wiring Diagram
 
