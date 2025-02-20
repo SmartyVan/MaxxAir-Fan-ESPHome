@@ -5,6 +5,12 @@ This project is made up of two parts:
 1. **ESPHome YAML configuration:** for an ESP microcontroller that utilizes an IR LED to control an Airxcel MaxxAir Fan with IR (7000k/7500k models).
 2. **Home Assistant Automation Blueprint:** to enable Auto Fan and set your preferences
 
+### Home Assistant Entities
+<img width="935" alt="Screenshot 2025-02-20 at 9 29 56 AM" src="https://github.com/user-attachments/assets/710301ec-5e1e-481d-b165-c50de1f5228e" />
+
+### Automation Blueprint
+<img width="1254" alt="Screenshot 2025-02-20 at 9 30 27 AM" src="https://github.com/user-attachments/assets/4a3024f7-c142-4011-bd94-b67a8f3651b5" />
+
 ## ESPHome Configuration
 The included ESPHome configuration replicates a majority of the features available on the MaxxAir Fan IR remote:
 - 10 speeds of an AIR OUT fan (lid open)
