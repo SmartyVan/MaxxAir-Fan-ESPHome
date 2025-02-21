@@ -62,7 +62,7 @@ Auto Fan never turns your fan off, only assigns speeds based on temperature. Tur
 ### Install Auto Fan Blueprint
 
 To install the Smarty Van Auto Fan Blueprint, navigate to your Home Assistant [Blueprints](https://my.home-assistant.io/redirect/blueprints/) and click the "Import Blueprint" button.
-Paste the [link to the bluprint](https://github.com/SmartyVan/MaxxAir-Fan-ESPHome/blob/main/smarty_van_autofan.yaml) in this repo.
+Paste the [link to the bluprint](https://github.com/SmartyVan/MaxxAir-Fan-ESPHome/blob/main/smarty_van_autofan_blueprint.yaml) in this repo.
 
 # Hardware
 
