@@ -5,6 +5,9 @@ This project is made up of two parts:
 1. **[ESPHome](https://esphome.io) YAML configuration:** for an ESP microcontroller that utilizes an IR LED to control an Airxcel MaxxAir Fan with IR ([7000k/7500k models](https://amzn.to/4gPCY9p)).
 2. **[Home Assistant](https://www.home-assistant.io) Automation Blueprint:** to enable Auto Fan and set your preferences
 
+## Support Smarty Van
+This ESPHome configuration and Automation Blueprint are free and open source. Consider joining a [Smarty Van YouTube Membership tier](https://www.youtube.com/channel/UCtDZoJa423TcB1ri-ZjDoqA/join) to show some love. 🥰🤓
+
 ### Home Assistant Entities
 <img width="935" alt="Screenshot 2025-02-20 at 9 29 56 AM" src="https://github.com/user-attachments/assets/710301ec-5e1e-481d-b165-c50de1f5228e" />
 
