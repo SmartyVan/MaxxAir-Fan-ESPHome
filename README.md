@@ -1,5 +1,5 @@
-# MaxxAir Fan Control in Home Assistant via ESPHome using IR
-Control your [IR (infrared) enabled MaxxAir Fan](https://amzn.to/4gPCY9p) from Home Assistant via ESPHome.\
+# IR MaxxAir Fan Control in Home Assistant via ESPHome
+Control your [IR (infrared) enabled MaxxAir Fan](https://amzn.to/4gPCY9p) from Home Assistant via ESPHome.
 
 This ESPHome configuration and Automation Blueprint are free and open source. Consider joining a [Smarty Van YouTube Membership tier](https://www.youtube.com/channel/UCtDZoJa423TcB1ri-ZjDoqA/join) to show some love. 🥰🤓
 
@@ -11,10 +11,10 @@ This project is made up of two parts:
 1. **[ESPHome](https://esphome.io) YAML configuration:** for an ESP microcontroller that utilizes an IR LED to control an Airxcel MaxxAir Fan with IR ([7000k/7500k models](https://amzn.to/4gPCY9p)).
 2. **[Home Assistant](https://www.home-assistant.io) Automation Blueprint:** to enable Auto Fan and set your preferences
 
-### Home Assistant Entities
+### Home Assistant Entities Created
 <img width="935" alt="Home Assistant Entities Added" src="https://github.com/user-attachments/assets/710301ec-5e1e-481d-b165-c50de1f5228e" />
 
-### Automation Blueprint
+### Automation Blueprint Options
 <img width="1254" alt="Smarty Van Auto Fan Automation Blueprint" src="https://github.com/user-attachments/assets/4a3024f7-c142-4011-bd94-b67a8f3651b5" />
 
 ## ESPHome Configuration
