@@ -1,0 +1,264 @@
+blueprint:
+  name: Smarty Van Auto Fan
+  description: |
+    ### Overview
+    
+    This blueprint brings switchable thermostatic speed control to a 10-speed `Fan` (such as the MaxxAir fan) based on a `Temperature Sensor`.
+    *Note: This automation can be used with any Home Assistant fan, but will only set integer speeds between 1 and 10.*
+    
+    When `Auto Fan Control` is on, `Fan` speed is linearly scaled between `Minimum Fan Speed` & `Maximum Fan Speed` using `Low / High Temperature Threshold` and `Temperature Sensor` values.
+    
+    ### Operation
+    
+    1. Set desired `Temperature Thresholds` and `Minimum / Maximum Fan Speed` in this blueprint.
+    2. Manually control the `Fan` (speed, on/off) to disable `Auto Fan Control` and begin full manual control. 
+    3. Turn on `Auto Fan Control` to turn your fan on and begin automatic speed control.
+    4. If `Auto Fan Control` is on, turn it off to turn the `Fan` off.
+    
+    ### Notes
+    
+    - If needed, create an [input_boolean helper](https://www.home-assistant.io/integrations/input_boolean/) to use for `Auto Fan Control` (this can be done in *Settings -> Devices & Services -> Helpers*)
+    - The `Fan` speed will be updated only when the `Auto Fan Control` (input boolean or switch) is on and when the `Temperature Sensor` entity's state updates
+    - `Auto Fan Control` will only turn your `Fan` off if you turn `Auto Fan Control` off
+    
+    **Created by:** [Smarty Van](https://www.youtube.com/@SmartyVan)
+  domain: automation
+  author: Smarty Van
+  input:
+    fan_entity:
+      name: Fan Entity
+      description: "Select the fan to control."
+      selector:
+        entity:
+          domain: fan
+    auto_fan_boolean:
+      name: Auto Fan Control
+      description: "Select a Switch or Input Boolean Helper you wish to use to enable or disable Auto Fan mode."
+      selector:
+        entity:
+          domain:
+            - input_boolean
+            - switch
+    temp_sensor:
+      name: Temperature Sensor
+      description: "Select the sensor that provides the temperature that should be used for Auto Fan. Note: The temperature unit (°C or °F) will be derived automatically."
+      selector:
+        entity:
+          domain: sensor
+          device_class: temperature
+    threshold_unit:
+      name: Threshold Temperature Unit
+      description: >
+        Select the unit for the temperature thresholds below.
+      default: "°F"
+      selector:
+        select:
+          options:
+            - "°F"
+            - "°C"
+          mode: list
+    low_threshold:
+      name: Low Temperature Threshold
+      description: >
+        Temperature at or below which the fan runs at its minimum speed (in the selected threshold unit).
+      default: 72
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: ""
+    high_threshold:
+      name: High Temperature Threshold
+      description: >
+        Temperature at or above which the fan runs at its maximum speed (in the selected threshold unit).
+      default: 85
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: ""
+    min_speed:
+      name: Minimum Fan Speed
+      description: "Set the minimum fan speed for Auto Fan."
+      default: 1
+      selector:
+        number:
+          min: 1
+          max: 10
+          step: 1
+          mode: slider
+          unit_of_measurement: ""
+    max_speed:
+      name: Maximum Fan Speed
+      description: "Set the maximum fan speed for Auto Fan."
+      default: 10
+      selector:
+        number:
+          min: 1
+          max: 10
+          step: 1
+          mode: slider
+          unit_of_measurement: ""
+
+trigger:
+  # Trigger when the temperature sensor updates.
+  - platform: state
+    entity_id: !input temp_sensor
+    enabled: true
+  # Trigger when the auto fan control turns on.
+  - platform: state
+    entity_id: !input auto_fan_boolean
+    from: "off"
+    to: "on"
+    id: firstOn
+  # Trigger when the auto fan control turns off.
+  - platform: state
+    entity_id: !input auto_fan_boolean
+    from: "on"
+    to: "off"
+    id: auto_fan_off
+  # Trigger when the fan’s speed attribute changes (indicating a manual speed change).
+  - platform: state
+    entity_id: !input fan_entity
+    attribute: percentage
+    id: manual_speed
+  # Trigger when the fan is turned off (e.g. manually).
+  - platform: state
+    entity_id: !input fan_entity
+    to: "off"
+    id: off_manually
+
+condition: []  # No global conditions; branching is handled in actions.
+
+action:
+  # Create local variables for inputs.
+  - variables:
+      fan_entity: !input fan_entity
+      auto_fan: !input auto_fan_boolean
+      temp_sensor: !input temp_sensor
+      threshold_unit: !input threshold_unit
+      low_threshold: !input low_threshold
+      high_threshold: !input high_threshold
+      min_speed: !input min_speed
+      max_speed: !input max_speed
+  # Compute trigger ID and current states.
+  - variables:
+      trig_id: "{{ trigger.id }}"
+      currentSpeed: "{{ state_attr(fan_entity, 'percentage') | int }}"
+      currentDirection: "{{ state_attr(fan_entity, 'direction') }}"
+      raw_temp: "{{ states(temp_sensor) | float }}"
+      # Derive the sensor's unit from its attributes.
+      sensor_unit: >
+        {% set unit = state_attr(temp_sensor, 'unit_of_measurement') %}
+        {% if unit is not none %}
+          {% if 'F' in unit %}
+            °F
+          {% elif 'C' in unit %}
+            °C
+          {% else %}
+            {{ unit }}
+          {% endif %}
+        {% else %}
+          "°F"
+        {% endif %}
+      sensor_temp: >
+        {% if sensor_unit != threshold_unit %}
+          {% if sensor_unit == '°F' and threshold_unit == '°C' %}
+            {{ ((raw_temp - 32) * 5 / 9) | float }}
+          {% elif sensor_unit == '°C' and threshold_unit == '°F' %}
+            {{ ((raw_temp * 9 / 5) + 32) | float }}
+          {% else %}
+            {{ raw_temp }}
+          {% endif %}
+        {% else %}
+          {{ raw_temp }}
+        {% endif %}
+      min_speed_val: "{{ min_speed | int }}"
+      max_speed_val: "{{ max_speed | int }}"
+      # Compute a discrete speed value (1–10) based on the thresholds.
+      newSpeed: >
+        {% set low = low_threshold | float %}
+        {% set high = high_threshold | float %}
+        {% set sensor_val = sensor_temp | float %}
+        {% if sensor_val <= low %}
+          {{ min_speed_val }}
+        {% elif sensor_val >= high %}
+          {{ max_speed_val }}
+        {% else %}
+          {{ (((sensor_val - low) / (high - low)) * (max_speed_val - min_speed_val) + min_speed_val) | round(0) | int }}
+        {% endif %}
+  - choose:
+      # Branch 1: If auto fan control was turned off by a user, then turn the fan off.
+      - conditions:
+          - condition: template
+            value_template: >
+              {{ trigger.id == 'auto_fan_off' and trigger.to_state.context.user_id is not none }}
+        sequence:
+          - service: fan.turn_off
+            target:
+              entity_id: !input fan_entity
+      # Branch 2: If the fan’s speed was manually adjusted by a user, disable auto fan control.
+      - conditions:
+          - condition: template
+            value_template: >
+              {{ trigger.id == 'manual_speed' and trigger.to_state.context.user_id is not none }}
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ auto_fan.startswith('input_boolean.') }}"
+                sequence:
+                  - service: input_boolean.turn_off
+                    target:
+                      entity_id: "{{ auto_fan }}"
+              - conditions:
+                  - condition: template
+                    value_template: "{{ auto_fan.startswith('switch.') }}"
+                sequence:
+                  - service: switch.turn_off
+                    target:
+                      entity_id: "{{ auto_fan }}"
+      # Branch 3: If the fan was turned off manually by a user, disable auto fan control.
+      - conditions:
+          - condition: template
+            value_template: >
+              {{ trigger.id == 'off_manually' and trigger.to_state.context.user_id is not none }}
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ auto_fan.startswith('input_boolean.') }}"
+                sequence:
+                  - service: input_boolean.turn_off
+                    target:
+                      entity_id: "{{ auto_fan }}"
+              - conditions:
+                  - condition: template
+                    value_template: "{{ auto_fan.startswith('switch.') }}"
+                sequence:
+                  - service: switch.turn_off
+                    target:
+                      entity_id: "{{ auto_fan }}"
+    default:
+      # Continue only if auto fan control is on.
+      - condition: template
+        value_template: "{{ is_state(auto_fan, 'on') }}"
+      - choose:
+          # Update the fan speed if the computed percentage differs from the current percentage,
+          # or if auto mode was just turned on.
+          - conditions:
+              - condition: or
+                conditions:
+                  - condition: template
+                    value_template: "{{ currentSpeed != (newSpeed * 10) }}"
+                  - condition: template
+                    value_template: "{{ trig_id == 'firstOn' }}"
+            sequence:
+              - service: fan.set_percentage
+                target:
+                  entity_id: !input fan_entity
+                data:
+                  percentage: "{{ newSpeed * 10 }}"
+
+mode: queued
+max: 10
