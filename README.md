@@ -1,18 +1,21 @@
 # MaxxAir Fan Control in Home Assistant via ESPHome using IR
-Control your [IR (infrared) enabled MaxxAir Fan](https://amzn.to/4gPCY9p) from Home Assistant via ESPHome
+Control your [IR (infrared) enabled MaxxAir Fan](https://amzn.to/4gPCY9p) from Home Assistant via ESPHome.\
 
+This ESPHome configuration and Automation Blueprint are free and open source. Consider joining a [Smarty Van YouTube Membership tier](https://www.youtube.com/channel/UCtDZoJa423TcB1ri-ZjDoqA/join) to show some love. 🥰🤓
+
+## Watch the YouTube video about this project
+[<img width="540" alt="Smarty Van YouTube video" src="https://img.youtube.com/vi/ckXplzLgLZw/maxresdefault.jpg"/>](https://www.youtube.com/watch?v=ckXplzLgLZw)
+
+## Project Components
 This project is made up of two parts:
 1. **[ESPHome](https://esphome.io) YAML configuration:** for an ESP microcontroller that utilizes an IR LED to control an Airxcel MaxxAir Fan with IR ([7000k/7500k models](https://amzn.to/4gPCY9p)).
 2. **[Home Assistant](https://www.home-assistant.io) Automation Blueprint:** to enable Auto Fan and set your preferences
 
-## Support Smarty Van
-This ESPHome configuration and Automation Blueprint are free and open source. Consider joining a [Smarty Van YouTube Membership tier](https://www.youtube.com/channel/UCtDZoJa423TcB1ri-ZjDoqA/join) to show some love. 🥰🤓
-
 ### Home Assistant Entities
-<img width="935" alt="Screenshot 2025-02-20 at 9 29 56 AM" src="https://github.com/user-attachments/assets/710301ec-5e1e-481d-b165-c50de1f5228e" />
+<img width="935" alt="Home Assistant Entities Added" src="https://github.com/user-attachments/assets/710301ec-5e1e-481d-b165-c50de1f5228e" />
 
 ### Automation Blueprint
-<img width="1254" alt="Screenshot 2025-02-20 at 9 30 27 AM" src="https://github.com/user-attachments/assets/4a3024f7-c142-4011-bd94-b67a8f3651b5" />
+<img width="1254" alt="Smarty Van Auto Fan Automation Blueprint" src="https://github.com/user-attachments/assets/4a3024f7-c142-4011-bd94-b67a8f3651b5" />
 
 ## ESPHome Configuration
 The included ESPHome configuration replicates a majority of the features available on the MaxxAir Fan IR remote:
@@ -77,4 +80,3 @@ Building your ESP IR device requires four items:
 - Annode of LED through resistor to 3V3
 - Cathode of LED to GPIO pin
 <img width="745" alt="Screenshot 2025-02-20 at 5 16 07 PM" src="https://github.com/user-attachments/assets/2293c199-a8dc-461a-a5ec-8d958d2c5503" />
-
