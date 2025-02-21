@@ -2,8 +2,8 @@
 Control your [IR (infrared) enabled MaxxAir Fan](https://amzn.to/4gPCY9p) from Home Assistant via ESPHome
 
 This project is made up of two parts:
-1. **ESPHome YAML configuration:** for an ESP microcontroller that utilizes an IR LED to control an Airxcel MaxxAir Fan with IR ([7000k/7500k models](https://amzn.to/4gPCY9p)).
-2. **Home Assistant Automation Blueprint:** to enable Auto Fan and set your preferences
+1. **[ESPHome](https://esphome.io) YAML configuration:** for an ESP microcontroller that utilizes an IR LED to control an Airxcel MaxxAir Fan with IR ([7000k/7500k models](https://amzn.to/4gPCY9p)).
+2. **[Home Assistant](https://www.home-assistant.io) Automation Blueprint:** to enable Auto Fan and set your preferences
 
 ### Home Assistant Entities
 <img width="935" alt="Screenshot 2025-02-20 at 9 29 56 AM" src="https://github.com/user-attachments/assets/710301ec-5e1e-481d-b165-c50de1f5228e" />
@@ -46,7 +46,7 @@ Auto Fan never turns your fan off, only assigns speeds based on temperature. Tur
 
 # Hardware
 
-Building your ESP device requires four items:
+Building your ESP IR device requires four items:
 - ESP8266 (or ESP32)——This configuration assumes a [Wemos D1 Mini](https://amzn.to/4177tBZ) but any ESP8266/32 should work (as long as you update pin asignments accordingly)
 - An [IR LED](https://amzn.to/3Dd07oq)
 - A [220Ω resistor](https://amzn.to/4gQCPmh)
@@ -56,4 +56,5 @@ Building your ESP device requires four items:
 
 - Annode of LED through resistor to 3V3
 - Cathode of LED to GPIO pin
-<img width="753" alt="Screenshot 2025-02-20 at 9 24 51 AM" src="https://github.com/user-attachments/assets/5b616b1c-5e94-4f68-8530-8089fa826956" />
+<img width="745" alt="Screenshot 2025-02-20 at 5 16 07 PM" src="https://github.com/user-attachments/assets/2293c199-a8dc-461a-a5ec-8d958d2c5503" />
+
