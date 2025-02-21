@@ -38,8 +38,16 @@ The ESPHome YAML logic manages the states of all four entities based on user inp
 - Turning off Auto Fan will turn off the fan
 
 ### Install ESPHome Configuration
-- To install the ESPHome configuration, create a new ESPHome deivce called " in the [ESPHome add-on](https://esphome.io/guides/getting_started_hassio.html).
-- Copy 
+- Create a new ESPHome deivce called "MaxxAir Fan Control" in the [ESPHome add-on](https://esphome.io/guides/getting_started_hassio.html)
+- Choose ESP8266 (or any board, we'll overwrite this in the following steps)
+- After the device has been created, skip the initial install
+- Edit the configuration of your new device and copy the configuration yaml in this repo into your ESPHome device configuration, overwriting the existing configuration
+- Change your board and pin definitions if necessary then save and close
+- Open Secrets (top right) in the ESPHome builder and add [secrets](https://esphome.io/components/wifi.html#wifi-component) for:
+  - `wifi_ssid`
+  - `wifi_password`
+- Add [OTA password](https://esphome.io/components/ota/esphome.html) and [API encryption](https://esphome.io/components/api.html#native-api-component) to your configuration if desired
+- Save and Install (wirelesly if you can, or use a USB and [ESPHome Webtools](https://web.esphome.io))
 
 ## Auto Fan
 The Auto Fan Automation Blueprint imitates (and improves) the MaxxAir IR remote's thermostatic control. When Auto Fan is enabled, your fan's speed will be adjusted based on configurable temperature thresholds, minimum and maximum fan speeds, and a temperature sensor of your choosing.
