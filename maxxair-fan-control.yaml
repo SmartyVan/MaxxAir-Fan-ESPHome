@@ -1,0 +1,536 @@
+## Writen by Mike Goubeaux @ Smarty Van: https://www.youtube.com/@SmartyVan
+
+## CHANGE THESE SUBSTITUTION VALUES FOR YOUR SETUP
+substitutions:
+  name: "maxxair-fan-control"
+  friendly_name: "MaxxAir Fan Control"
+  onboard_led_pin: "D4"
+  ir_led_pin: "D6"
+
+esphome:
+  name: "${name}"
+  friendly_name: "${friendly_name}"
+
+esp8266:
+  board: d1_mini
+  early_pin_init: false
+  restore_from_flash: true
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+
+ota:
+  platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  fast_connect: true
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Maxxair-Fan-Control"
+    password: !secret  wifi_password
+
+captive_portal:
+
+status_led:
+  pin:
+    number: "${onboard_led_pin}"
+    inverted: true
+
+# wifi diagnostics
+sensor:
+  - platform: wifi_signal # Reports the WiFi signal strength/RSSI in dB
+    name: "WiFi Signal dB"
+    id: wifi_signal_db
+    update_interval: 60s
+    entity_category: "diagnostic"
+
+  - platform: copy # Reports the WiFi signal strength in %
+    source_id: wifi_signal_db
+    name: "WiFi Signal Strength"
+    filters:
+      - lambda: return min(max(2 * (x + 100.0), 0.0), 100.0);
+    unit_of_measurement: "Signal %"
+    entity_category: "diagnostic"
+
+
+remote_transmitter:
+  pin: "${ir_led_pin}"
+  # Infrared remotes use a 50% carrier signal
+  carrier_duty_percent: 50%
+
+globals:
+  # store the fan speed float output for reference
+  - id: fan_output_value
+    type: float
+    restore_value: no
+    initial_value: '0.0'
+
+fan:
+  - platform: speed
+    speed_count: 10
+    icon: "mdi:fan"
+    name: MaxxAir Fan
+    id: maxxair_fan_id
+    output: fan_output
+    direction_output: maxxfan_direction
+    restore_mode: RESTORE_DEFAULT_OFF
+    on_turn_off:
+      # publish states to switches/cover
+      - switch.template.publish:
+          id: ceiling_fan_mode
+          state: OFF
+      - switch.template.publish:
+          id: auto_fan
+          state: OFF
+      - cover.template.publish:
+          id: maxxair_lid
+          state: CLOSED
+    on_turn_on:
+      # publish states to cover
+      - if:
+          condition:
+            - switch.is_off: ceiling_fan_mode
+          then:
+            - cover.template.publish:
+                id: maxxair_lid
+                state: OPEN
+
+
+output:
+  # fan direction - received from fan platform
+  - platform: template
+    id: maxxfan_direction
+    type: float
+    write_action:
+      - logger.log: "direction change written"
+      # turn off ceiling fan mode if fan is forward 
+      - lambda: |-
+          if (id(maxxair_fan_id).direction == FanDirection::FORWARD) {
+            id(ceiling_fan_mode).turn_off();
+          }
+  
+  # fan speed - received from fan platform
+  - platform: template
+    id: fan_output
+    type: float
+    write_action:
+      # keep track of current fan speed float value
+      - lambda: id(fan_output_value) = state;
+      - lambda: |-
+          ESP_LOGD("fan", "Fan speed updated: %.2f", state);
+      - if:
+          condition:
+            - lambda: return state > 0.0;
+          then:
+            - script.execute: send_speeds
+      
+script:      
+  - id: send_speeds
+    then:
+      # if fan speed output is above 0 then continue
+      - if:
+          condition:
+            - lambda: return id(fan_output_value) > 0.0;
+          then:
+            - logger.log: "Send Speeds Script Triggered"
+            # check for conditions and choose the appropriate command to send
+            ### SPEEDS AND REVERSE (Pull air in)
+            - if:
+                condition:
+                  and:
+                    - lambda: return id(maxxair_fan_id).speed == 1;
+                    - lambda: return id(maxxair_fan_id).direction == FanDirection::REVERSE;
+                    - switch.is_off: ceiling_fan_mode
+                then:
+                  - remote_transmitter.transmit_raw:
+                      carrier_frequency: 38kHz
+                      code: [1631, -805, 808, -1638, 781, -829, 807, -1638, 806, -806, 833, -802, 1606, -828, 807, -2449, 6478, -2443, 806, -5676, 809, -1637, 5675, -829, 784, -1635, 807, -4884, 807, -2425, 4847, -828, 1630, -1615, 802, -4075, 808, -3233, 4052, -826, 2429, -1637, 2426, -1617, 1604, -3261, 806, -829, 1607, -827, 781, -830, 1629, -1615, 1628, -805, 805, -829, 3226, -1640, 3227, -831, 1629, -804, 805, -1638, 805, -8104, 808, -1638, 2426, -807, 1602, -1639, 806, -2451, 779, -1642, 803]
+            - if:
+                condition:
+                  and:
+                    - lambda: return id(maxxair_fan_id).speed == 2;
+                    - lambda: return id(maxxair_fan_id).direction == FanDirection::REVERSE;
+                    - switch.is_off: ceiling_fan_mode
+                then:
+                  - remote_transmitter.transmit_raw:
+                      carrier_frequency: 38kHz
+                      code: [1573, -862, 747, -1673, 774, -861, 773, -1648, 774, -860, 776, -862, 1573, -838, 797, -2458, 6470, -2459, 774, -5735, 772, -1648, 5671, -837, 776, -1672, 749, -4922, 774, -2484, 4819, -862, 1573, -1672, 774, -4087, 773, -3295, 4024, -861, 2398, -1646, 2398, -1674, 1572, -3270, 799, -838, 1595, -838, 3222, -1647, 2421, -839, 773, -862, 2398, -1649, 3222, -839, 1598, -838, 775, -1672, 752, -8169, 773, -1674, 2398, -839, 1571, -1674, 774, -863, 1573, -862, 2396]
+            - if:
+                condition:
+                  and:
+                    - lambda: return id(maxxair_fan_id).speed == 3;
+                    - lambda: return id(maxxair_fan_id).direction == FanDirection::REVERSE;
+                    - switch.is_off: ceiling_fan_mode
+                then:
+                  - remote_transmitter.transmit_raw:
+                      carrier_frequency: 38kHz
+                      code: [1608, -831, 808, -1641, 808, -805, 810, -1637, 811, -804, 809, -828, 1609, -829, 805, -2431, 6484, -2451, 808, -5704, 809, -1639, 5656, -830, 836, -1612, 809, -4868, 807, -2453, 4857, -829, 1607, -1639, 811, -4078, 783, -3268, 4057, -829, 2430, -1619, 2432, -1642, 1610, -3264, 808, -808, 1633, -829, 3233, -1639, 1609, -3265, 2412, -1639, 3231, -831, 1630, -807, 807, -1642, 806, -8116, 809, -1642, 2405, -831, 1631, -1620, 807, -1644, 4058]
+            - if:
+                condition:
+                  and:
+                    - lambda: return id(maxxair_fan_id).speed == 4;
+                    - lambda: return id(maxxair_fan_id).direction == FanDirection::REVERSE;
+                    - switch.is_off: ceiling_fan_mode
+                then:
+                  - remote_transmitter.transmit_raw:
+                      carrier_frequency: 38kHz
+                      code: [1640, -797, 812, -1613, 815, -822, 812, -1609, 813, -800, 814, -824, 1637, -800, 814, -2445, 6501, -2424, 840, -5670, 810, -1613, 5685, -823, 811, -1611, 813, -4886, 808, -2424, 4914, -795, 1616, -1632, 811, -4047, 839, -3234, 4057, -803, 2433, -1637, 2436, -1638, 1638, -3234, 785, -830, 1634, -800, 3263, -1612, 3257, -805, 813, -823, 1612, -1635, 3264, -796, 1611, -827, 780, -1640, 838, -8105, 812, -1636, 2430, -805, 1613, -1633, 814, -822, 811, -802, 811, -1636, 784]
+            - if:
+                condition:
+                  and:
+                    - lambda: return id(maxxair_fan_id).speed == 5;
+                    - lambda: return id(maxxair_fan_id).direction == FanDirection::REVERSE;
+                    - switch.is_off: ceiling_fan_mode
+                then:
+                  - remote_transmitter.transmit_raw:
+                      carrier_frequency: 38kHz
+                      code: [1597, -862, 751, -1675, 776, -838, 801, -1647, 779, -861, 776, -837, 1603, -860, 776, -2460, 6480, -2459, 776, -5718, 799, -1648, 5655, -860, 776, -1649, 802, -4903, 778, -2484, 4830, -837, 1602, -1649, 802, -4088, 776, -3278, 4049, -837, 2428, -1647, 2405, -1648, 1602, -3277, 798, -837, 1603, -835, 3255, -1621, 1602, -837, 1577, -1675, 1602, -1649, 3228, -861, 1577, -862, 776, -1648, 777, -8154, 801, -1650, 2403, -839, 1598, -1673, 753, -3301, 778, -839, 801]
+            - if:
+                condition:
+                  and:
+                    - lambda: return id(maxxair_fan_id).speed == 6;
+                    - lambda: return id(maxxair_fan_id).direction == FanDirection::REVERSE;
+                    - switch.is_off: ceiling_fan_mode
+                then:
+                  - remote_transmitter.transmit_raw:
+                      carrier_frequency: 38kHz
+                      code: [1572, -858, 778, -1670, 775, -834, 777, -1667, 776, -859, 777, -834, 1575, -858, 776, -2481, 6442, -2457, 797, -5704, 776, -1644, 5667, -859, 776, -1643, 775, -4892, 799, -2456, 4844, -835, 1600, -1643, 776, -4083, 798, -3264, 4018, -860, 2398, -1644, 2422, -1645, 1599, -3265, 776, -863, 1573, -860, 3199, -1644, 2423, -3295, 1570, -1651, 3219, -842, 1591, -838, 772, -1670, 776, -8136, 797, -1646, 2396, -860, 1597, -1645, 773, -837, 3219, -835, 773]
+            - if:
+                condition:
+                  and:
+                    - lambda: return id(maxxair_fan_id).speed == 7;
+                    - lambda: return id(maxxair_fan_id).direction == FanDirection::REVERSE;
+                    - switch.is_off: ceiling_fan_mode
+                then:
+                  - remote_transmitter.transmit_raw:
+                      carrier_frequency: 38kHz
+                      code: [1600, -833, 776, -1647, 800, -834, 776, -1669, 775, -836, 778, -833, 1599, -832, 800, -2453, 6441, -2481, 801, -5701, 775, -1670, 5642, -836, 774, -1669, 775, -4888, 777, -2455, 4839, -835, 1598, -1670, 801, -4058, 798, -3265, 4022, -835, 2421, -1644, 2400, -1670, 1576, -3290, 750, -862, 1600, -837, 3244, -1644, 1575, -1648, 2421, -836, 776, -1648, 3220, -861, 1574, -861, 777, -1644, 776, -8164, 775, -1649, 2398, -835, 1598, -1669, 778, -1648, 799, -1645, 776]
+            - if:
+                condition:
+                  and:
+                    - lambda: return id(maxxair_fan_id).speed == 8;
+                    - lambda: return id(maxxair_fan_id).direction == FanDirection::REVERSE;
+                    - switch.is_off: ceiling_fan_mode
+                then:
+                  - remote_transmitter.transmit_raw:
+                      carrier_frequency: 38kHz
+                      code: [1599, -859, 775, -1648, 777, -858, 776, -1646, 776, -862, 776, -835, 1601, -834, 775, -2459, 6495, -2458, 774, -5715, 800, -1645, 5647, -859, 752, -1673, 775, -4924, 774, -2458, 4851, -861, 1575, -1648, 776, -4111, 776, -3272, 4047, -834, 2401, -1672, 2375, -1674, 1601, -3296, 776, -835, 1601, -836, 3225, -1649, 4024, -861, 776, -837, 800, -1627, 3223, -861, 1577, -862, 775, -1648, 800, -8149, 776, -1676, 2401, -835, 1599, -1648, 776, -861, 750, -1674, 1599]
+            - if:
+                condition:
+                  and:
+                    - lambda: return id(maxxair_fan_id).speed == 9;
+                    - lambda: return id(maxxair_fan_id).direction == FanDirection::REVERSE;
+                    - switch.is_off: ceiling_fan_mode
+                then:
+                  - remote_transmitter.transmit_raw:
+                      carrier_frequency: 38kHz
+                      code: [1608, -832, 781, -1650, 805, -835, 781, -1647, 806, -834, 780, -838, 1605, -834, 805, -2461, 6517, -2435, 803, -5721, 781, -1651, 5680, -835, 781, -1648, 803, -4902, 781, -2463, 4857, -861, 1607, -1648, 781, -4093, 802, -3275, 4033, -838, 2429, -1648, 2434, -1649, 1607, -3274, 805, -814, 1605, -839, 3230, -1650, 1604, -839, 803, -1645, 782, -836, 802, -1649, 3235, -833, 1606, -838, 778, -1651, 802, -8155, 804, -1650, 2409, -834, 1604, -1649, 803, -2463, 2407]
+            - if:
+                condition:
+                  and:
+                    - lambda: return id(maxxair_fan_id).speed == 10;
+                    - lambda: return id(maxxair_fan_id).direction == FanDirection::REVERSE;
+                    - switch.is_off: ceiling_fan_mode
+                then:
+                  - remote_transmitter.transmit_raw:
+                      carrier_frequency: 38kHz
+                      code: [1575, -860, 776, -1650, 773, -861, 749, -1673, 774, -840, 797, -838, 1599, -862, 775, -2460, 6470, -2461, 775, -5736, 750, -1675, 5671, -837, 777, -1649, 772, -4927, 772, -2486, 4821, -862, 1598, -1650, 773, -4118, 748, -3298, 4024, -863, 2373, -1677, 2398, -1677, 1570, -3299, 748, -867, 1598, -865, 3197, -1676, 2371, -865, 1599, -1653, 771, -1676, 3221, -844, 1598, -842, 744, -1704, 746, -8178, 772, -1653, 2426, -837, 1570, -1676, 773, -841, 1596]
+          
+            ### SPEEDS AND FORWARD (Exhuast air out)     
+            
+            - if:
+                condition:
+                  and:
+                    - lambda: return id(maxxair_fan_id).speed == 1;
+                    - lambda: return id(maxxair_fan_id).direction == FanDirection::FORWARD;
+                    - switch.is_off: ceiling_fan_mode
+                then:
+                  - remote_transmitter.transmit_raw:
+                      carrier_frequency: 38kHz
+                      code: [1641, -799, 842, -1610, 815, -798, 819, -1634, 816, -800, 818, -820, 1643, -798, 795, -2444, 6526, -2446, 809, -5684, 815, -1638, 5688, -804, 839, -1609, 812, -4867, 818, -2446, 4895, -800, 1641, -1613, 816, -4077, 810, -3245, 4091, -798, 2441, -1613, 2466, -1615, 1638, -3238, 841, -799, 813, -1614, 842, -798, 1640, -1613, 1631, -810, 816, -800, 3268, -1612, 3261, -804, 1637, -802, 816, -1636, 811, -8128, 834, -1621, 2441, -826, 1641, -1612, 809, -1620, 1639, -1615, 817]
+            - if:
+                condition:
+                  and:
+                    - lambda: return id(maxxair_fan_id).speed == 2;
+                    - lambda: return id(maxxair_fan_id).direction == FanDirection::FORWARD;
+                    - switch.is_off: ceiling_fan_mode
+                then:
+                  - remote_transmitter.transmit_raw:
+                      carrier_frequency: 38kHz
+                      code: [1618, -821, 815, -1612, 844, -795, 815, -1611, 818, -822, 813, -803, 1641, -796, 845, -2420, 6520, -2423, 845, -5674, 817, -1611, 5697, -823, 844, -1582, 845, -4862, 814, -2424, 4919, -797, 1645, -1606, 815, -4051, 845, -3228, 4065, -800, 2469, -1606, 2438, -1611, 1639, -3237, 839, -800, 843, -1610, 3264, -1612, 2438, -801, 842, -797, 2443, -1609, 3265, -801, 1637, -802, 847, -1605, 815, -8118, 838, -1615, 2439, -803, 1672, -1607, 816, -798, 844, -1611, 2442]
+            - if:
+                condition:
+                  and:
+                    - lambda: return id(maxxair_fan_id).speed == 3;
+                    - lambda: return id(maxxair_fan_id).direction == FanDirection::FORWARD;
+                    - switch.is_off: ceiling_fan_mode
+                then:
+                  - remote_transmitter.transmit_raw:
+                      carrier_frequency: 38kHz
+                      code: [1608, -831, 807, -1640, 804, -810, 803, -1642, 782, -832, 805, -830, 1607, -828, 780, -2454, 6477, -2452, 804, -5705, 806, -1616, 5672, -831, 806, -1638, 780, -4888, 803, -2452, 4848, -832, 1603, -1645, 805, -4055, 804, -3263, 4050, -832, 2426, -1622, 2424, -1644, 1605, -3265, 780, -835, 801, -1645, 3229, -1641, 1604, -3269, 2427, -1642, 3228, -832, 1607, -829, 781, -1642, 807, -8139, 781, -1647, 2428, -831, 1607, -1641, 807, -2432, 3256]
+            - if:
+                condition:
+                  and:
+                    - lambda: return id(maxxair_fan_id).speed == 4;
+                    - lambda: return id(maxxair_fan_id).direction == FanDirection::FORWARD;
+                    - switch.is_off: ceiling_fan_mode
+                then:
+                  - remote_transmitter.transmit_raw:
+                      carrier_frequency: 38kHz
+                      code: [1603, -833, 777, -1648, 777, -836, 801, -1647, 778, -860, 752, -862, 1601, -833, 778, -2461, 6499, -2458, 776, -5711, 773, -1671, 5676, -813, 800, -1648, 777, -4900, 775, -2485, 4849, -859, 1576, -1671, 777, -4086, 777, -3274, 4023, -861, 2400, -1672, 2401, -1647, 1601, -3296, 751, -862, 777, -1673, 3200, -1647, 3226, -859, 753, -859, 1601, -1649, 3226, -835, 1601, -837, 776, -1651, 796, -8150, 801, -1652, 2401, -862, 1576, -1649, 799, -837, 2403, -1653, 772]
+            - if:
+                condition:
+                  and:
+                    - lambda: return id(maxxair_fan_id).speed == 5;
+                    - lambda: return id(maxxair_fan_id).direction == FanDirection::FORWARD;
+                    - switch.is_off: ceiling_fan_mode
+                then:
+                  - remote_transmitter.transmit_raw:
+                      carrier_frequency: 38kHz
+                      code: [1640, -822, 808, -1616, 813, -822, 810, -1612, 839, -798, 813, -798, 1636, -800, 811, -2448, 6482, -2450, 841, -5673, 811, -1611, 5710, -801, 809, -1612, 841, -4861, 810, -2422, 4885, -826, 1637, -1611, 809, -4051, 838, -3235, 4059, -802, 2436, -1636, 2432, -1614, 1634, -3235, 811, -825, 809, -1615, 3262, -1636, 1611, -825, 1613, -1637, 1635, -1613, 3234, -827, 1609, -828, 809, -1615, 838, -8109, 809, -1618, 2460, -802, 1612, -1637, 814, -1636, 809, -803, 834, -803, 808]
+            - if:
+                condition:
+                  and:
+                    - lambda: return id(maxxair_fan_id).speed == 6;
+                    - lambda: return id(maxxair_fan_id).direction == FanDirection::FORWARD;
+                    - switch.is_off: ceiling_fan_mode
+                then:
+                  - remote_transmitter.transmit_raw:
+                      carrier_frequency: 38kHz
+                      code: [1635, -796, 843, -1605, 840, -771, 837, -1609, 812, -799, 814, -823, 1638, -797, 808, -2424, 6529, -2421, 809, -5670, 841, -1605, 5678, -804, 811, -1632, 813, -4857, 840, -2419, 4879, -801, 1638, -1608, 840, -4041, 810, -3228, 4055, -825, 2432, -1610, 2433, -1635, 1631, -3235, 837, -801, 811, -1609, 3252, -1611, 2456, -3232, 1610, -1633, 3254, -800, 1636, -795, 807, -1612, 835, -8102, 809, -1614, 2456, -802, 1629, -1614, 810, -826, 807, -804, 1633, -801, 808]
+            - if:
+                condition:
+                  and:
+                    - lambda: return id(maxxair_fan_id).speed == 7;
+                    - lambda: return id(maxxair_fan_id).direction == FanDirection::FORWARD;
+                    - switch.is_off: ceiling_fan_mode
+                then:
+                  - remote_transmitter.transmit_raw:
+                      carrier_frequency: 38kHz
+                      code: [1641, -792, 810, -1613, 839, -796, 809, -1612, 838, -798, 812, -799, 1634, -799, 813, -2444, 6504, -2422, 842, -5665, 811, -1610, 5712, -794, 813, -1608, 819, -4877, 810, -2420, 4911, -796, 1641, -1604, 813, -4044, 842, -3226, 4055, -801, 2463, -1607, 2462, -1608, 1640, -3230, 812, -801, 840, -1608, 3237, -1632, 1614, -1633, 2433, -802, 840, -1605, 3264, -794, 1613, -821, 811, -1610, 835, -8106, 811, -1637, 2435, -799, 1635, -1610, 838, -4043, 810]
+            - if:
+                condition:
+                  and:
+                    - lambda: return id(maxxair_fan_id).speed == 8;
+                    - lambda: return id(maxxair_fan_id).direction == FanDirection::FORWARD;
+                    - switch.is_off: ceiling_fan_mode
+                then:
+                  - remote_transmitter.transmit_raw:
+                      carrier_frequency: 38kHz
+                      code: [1637, -799, 839, -1612, 811, -800, 814, -1634, 810, -803, 813, -824, 1640, -796, 839, -2422, 6485, -2444, 813, -5672, 814, -1633, 5683, -803, 840, -1608, 839, -4859, 808, -2423, 4882, -800, 1636, -1610, 835, -4052, 785, -3260, 4060, -825, 2463, -1608, 2434, -1616, 1631, -3239, 811, -827, 811, -1615, 3257, -1613, 4084, -800, 811, -803, 836, -1611, 3261, -801, 1636, -800, 837, -1613, 785, -8143, 838, -1613, 2437, -802, 1635, -1613, 835, -803, 1611, -825, 1638]
+            - if:
+                condition:
+                  and:
+                    - lambda: return id(maxxair_fan_id).speed == 9;
+                    - lambda: return id(maxxair_fan_id).direction == FanDirection::FORWARD;
+                    - switch.is_off: ceiling_fan_mode
+                then:
+                  - remote_transmitter.transmit_raw:
+                      carrier_frequency: 38kHz
+                      code: [1617, -821, 844, -1580, 846, -793, 840, -1583, 871, -767, 816, -822, 1641, -795, 845, -2389, 6540, -2393, 816, -5697, 815, -1607, 5742, -771, 816, -1631, 841, -4834, 842, -2416, 4891, -796, 1613, -1635, 815, -4049, 816, -3256, 4066, -819, 2437, -1607, 2468, -1607, 1643, -3230, 814, -801, 845, -1606, 3269, -1605, 1642, -795, 842, -1609, 815, -798, 812, -1608, 3269, -821, 1618, -819, 841, -1582, 844, -8107, 811, -1616, 2467, -796, 1641, -1606, 815, -1611, 3264]
+            - if:
+                condition:
+                  and:
+                    - lambda: return id(maxxair_fan_id).speed == 10;
+                    - lambda: return id(maxxair_fan_id).direction == FanDirection::FORWARD;
+                    - switch.is_off: ceiling_fan_mode
+                then:
+                  - remote_transmitter.transmit_raw:
+                      carrier_frequency: 38kHz
+                      code: [1642, -820, 838, -1586, 839, -798, 816, -1605, 814, -823, 816, -796, 1637, -801, 839, -2417, 6516, -2415, 813, -5669, 842, -1604, 5688, -820, 838, -1584, 816, -4879, 814, -2418, 4886, -798, 1641, -1603, 843, -4043, 812, -3231, 4089, -796, 2464, -1606, 2438, -1607, 1640, -3229, 817, -819, 813, -1610, 3262, -1606, 2462, -798, 1638, -1608, 842, -1606, 3267, -792, 1642, -792, 813, -1609, 842, -8100, 815, -1608, 2464, -797, 1640, -1606, 812, -800, 841]
+
+            ### SPEEDS AND REVERSE AND LID CLOSED (CEILING FAN MODE)
+            
+            - if:
+                condition:
+                  and:
+                    - lambda: return id(maxxair_fan_id).speed == 1;
+                    - switch.is_on: ceiling_fan_mode
+                then:
+                  - remote_transmitter.transmit_raw:
+                      carrier_frequency: 38kHz
+                      code: [1631, -831, 781, -1647, 804, -832, 805, -1621, 804, -834, 804, -813, 1602, -835, 801, -2459, 6485, -2457, 809, -5713, 781, -1647, 5680, -832, 804, -1619, 805, -4902, 783, -2459, 4855, -834, 1608, -1644, 805, -4090, 802, -3273, 4034, -835, 2428, -1649, 2405, -1649, 1601, -3275, 778, -1672, 2432, -834, 1605, -1645, 1606, -833, 778, -836, 3230, -1646, 3242, -824, 1604, -835, 802, -1648, 805, -8150, 781, -1648, 2404, -860, 1604, -1621, 805, -837, 804, -3271, 781]
+            - if:
+                condition:
+                  and:
+                    - lambda: return id(maxxair_fan_id).speed == 2;
+                    - switch.is_on: ceiling_fan_mode
+                then:
+                  - remote_transmitter.transmit_raw:
+                      carrier_frequency: 38kHz
+                      code: [1574, -866, 748, -1679, 776, -865, 773, -1653, 775, -842, 772, -891, 1549, -866, 772, -2488, 6457, -2489, 775, -5744, 800, -1628, 5654, -842, 798, -1656, 773, -4933, 772, -2469, 4852, -869, 1575, -1679, 774, -4098, 778, -3301, 3999, -868, 2401, -1654, 2401, -1682, 1572, -3332, 771, -1662, 4826, -1704, 2375, -866, 774, -842, 2400, -1679, 3204, -864, 1578, -866, 749, -1707, 747, -8169, 799, -1682, 2377, -891, 1602, -1653, 749, -1681, 4030]
+            - if:
+                condition:
+                  and:
+                    - lambda: return id(maxxair_fan_id).speed == 3;
+                    - switch.is_on: ceiling_fan_mode
+                then:
+                  - remote_transmitter.transmit_raw:
+                      carrier_frequency: 38kHz
+                      code: [1603, -838, 775, -1680, 776, -865, 751, -1677, 750, -868, 774, -866, 1574, -866, 774, -2492, 6460, -2492, 775, -5732, 773, -1680, 5656, -868, 748, -1681, 773, -4937, 774, -2471, 4827, -867, 1601, -1680, 774, -4098, 748, -3308, 4029, -868, 2403, -1678, 2401, -1655, 1574, -3309, 772, -1680, 4832, -1678, 1577, -3309, 2401, -1657, 3228, -868, 1574, -867, 749, -1680, 775, -8191, 747, -1709, 2374, -866, 1576, -1679, 747, -869, 1576, -870, 2398]
+            - if:
+                condition:
+                  and:
+                    - lambda: return id(maxxair_fan_id).speed == 4;
+                    - switch.is_on: ceiling_fan_mode
+                then:
+                  - remote_transmitter.transmit_raw:
+                      carrier_frequency: 38kHz
+                      code: [1571, -868, 770, -1653, 773, -866, 770, -1654, 772, -867, 773, -864, 1575, -865, 748, -2491, 6475, -2488, 747, -5746, 748, -1703, 5678, -817, 772, -1678, 773, -4911, 771, -2492, 4852, -839, 1574, -1678, 745, -4148, 748, -3303, 4025, -865, 2375, -1702, 2373, -1679, 1574, -3304, 771, -1658, 4845, -1654, 3223, -863, 748, -865, 1598, -1653, 3224, -841, 1599, -866, 774, -1651, 772, -8157, 771, -1677, 2370, -864, 1598, -1676, 746, -4925, 771]
+            - if:
+                condition:
+                  and:
+                    - lambda: return id(maxxair_fan_id).speed == 5;
+                    - switch.is_on: ceiling_fan_mode
+                then:
+                  - remote_transmitter.transmit_raw:
+                      carrier_frequency: 38kHz
+                      code: [1631, -810, 805, -1648, 807, -808, 805, -1644, 783, -834, 805, -834, 1609, -832, 783, -2458, 6515, -2432, 829, -5689, 805, -1647, 5687, -809, 802, -1647, 781, -4903, 806, -2458, 4858, -834, 1608, -1645, 805, -4089, 781, -3270, 4056, -835, 2406, -1648, 2430, -1649, 1606, -3273, 804, -1650, 4883, -1620, 1605, -836, 1604, -1649, 1604, -1647, 3232, -836, 1607, -833, 781, -1647, 805, -8153, 781, -1652, 2428, -835, 1583, -1670, 806, -836, 804, -813, 1602, -838, 804]
+            - if:
+                condition:
+                  and:
+                    - lambda: return id(maxxair_fan_id).speed == 6;
+                    - switch.is_on: ceiling_fan_mode
+                then:
+                  - remote_transmitter.transmit_raw:
+                      carrier_frequency: 38kHz
+                      code: [1609, -828, 807, -1619, 808, -831, 807, -1617, 810, -830, 806, -808, 1606, -830, 809, -2451, 6511, -2426, 809, -5706, 806, -1620, 5682, -828, 808, -1616, 810, -4893, 806, -2432, 4882, -831, 1608, -1640, 807, -4061, 808, -3264, 4057, -809, 2432, -1638, 2432, -1645, 1609, -3265, 809, -1619, 4879, -1620, 2430, -3270, 1610, -1639, 3233, -829, 1611, -828, 782, -1644, 829, -8118, 808, -1644, 2407, -831, 1634, -1615, 807, -1643, 808, -806, 806, -830, 782]
+            - if:
+                condition:
+                  and:
+                    - lambda: return id(maxxair_fan_id).speed == 7;
+                    - switch.is_on: ceiling_fan_mode
+                then:
+                  - remote_transmitter.transmit_raw:
+                      carrier_frequency: 38kHz
+                      code: [1606, -838, 805, -1647, 781, -837, 804, -1648, 781, -836, 806, -835, 1609, -834, 783, -2466, 6515, -2461, 782, -5726, 810, -1643, 5677, -824, 806, -1648, 784, -4905, 803, -2465, 4865, -832, 1606, -1651, 803, -4093, 805, -3251, 4061, -835, 2407, -1648, 2436, -1652, 1605, -3278, 776, -1677, 4864, -1648, 1608, -1648, 2409, -839, 802, -1649, 3236, -838, 1606, -835, 807, -1647, 780, -8185, 780, -1651, 2407, -861, 1581, -1649, 803, -836, 2432, -812, 804]
+            - if:
+                condition:
+                  and:
+                    - lambda: return id(maxxair_fan_id).speed == 8;
+                    - switch.is_on: ceiling_fan_mode
+                then:
+                  - remote_transmitter.transmit_raw:
+                      carrier_frequency: 38kHz
+                      code: [1601, -836, 779, -1678, 750, -863, 778, -1676, 776, -842, 774, -865, 1578, -864, 775, -2490, 6458, -2486, 778, -5723, 778, -1676, 5661, -863, 779, -1648, 778, -4912, 798, -2464, 4861, -839, 1602, -1652, 778, -4098, 800, -3278, 4057, -838, 2407, -1673, 2405, -1651, 1602, -3279, 776, -1680, 4834, -1676, 4031, -864, 751, -864, 777, -1677, 3202, -843, 1599, -863, 751, -1677, 775, -8185, 776, -1652, 2405, -863, 1578, -1653, 800, -2463, 2432]
+            - if:
+                condition:
+                  and:
+                    - lambda: return id(maxxair_fan_id).speed == 9;
+                    - switch.is_on: ceiling_fan_mode
+                then:
+                  - remote_transmitter.transmit_raw:
+                      carrier_frequency: 38kHz
+                      code: [1639, -828, 811, -1621, 837, -803, 814, -1618, 814, -826, 812, -807, 1635, -805, 841, -2428, 6497, -2458, 811, -5719, 810, -1621, 5701, -828, 810, -1619, 815, -4901, 808, -2435, 4899, -827, 1615, -1643, 811, -4065, 811, -3271, 4065, -809, 2442, -1641, 2414, -1645, 1637, -3244, 837, -1622, 4892, -1619, 1611, -833, 809, -1644, 809, -808, 811, -1642, 3239, -832, 1611, -830, 811, -1617, 811, -8152, 811, -1623, 2438, -830, 1613, -1642, 812, -831, 810, -1622, 1635]
+            - if:
+                condition:
+                  and:
+                    - lambda: return id(maxxair_fan_id).speed == 10;
+                    - switch.is_on: ceiling_fan_mode
+                then:
+                  - remote_transmitter.transmit_raw:
+                      carrier_frequency: 38kHz
+                      code: [1612, -833, 811, -1647, 782, -835, 781, -1677, 812, -808, 834, -807, 1612, -834, 782, -2462, 6525, -2461, 786, -5730, 808, -1647, 5701, -809, 809, -1647, 809, -4886, 807, -2463, 4896, -811, 1611, -1651, 807, -4098, 808, -3256, 4069, -835, 2413, -1650, 2463, -1628, 1610, -3279, 809, -1652, 4872, -1649, 2417, -834, 1611, -1652, 805, -1650, 3243, -834, 1638, -813, 804, -1625, 807, -8172, 808, -1652, 2415, -835, 1610, -1652, 788, -1671, 1610]
+
+
+cover:
+  - platform: template
+    id: maxxair_lid
+    name: "Lid"
+    icon: mdi:chart-ppf
+    assumed_state: true
+    optimistic: True
+    on_open: 
+      # if fan is off send lid open (fan off) command
+      - if:
+          condition:
+            - fan.is_off: maxxair_fan_id
+          then:
+            # fan off - lid open
+            - remote_transmitter.transmit_raw:
+                carrier_frequency: 38kHz
+                code: [1815, -743, 893, -1527, 846, -787, 895, -1526, 845, -789, 894, -716, 1717, -716, 849, -2402, 6515, -2403, 893, -5584, 851, -1593, 5715, -785, 888, -1533, 847, -4812, 913, -2342, 4954, -724, 1711, -1533, 847, -4007, 912, -3154, 4159, -725, 2468, -1593, 2511, -1536, 1708, -3154, 2472, -1594, 3332, -1536, 1706, -728, 846, -785, 3267, -1596, 1646, -786, 1644, -789, 850, -762, 844, -1579, 869, -8061, 845, -1577, 2494, -763, 1670, -1572, 3265, -794, 2491]
+      # fan is on and ceiling fan mode is on, set state of ceiling fan mode to OFF
+      - if:
+          condition:
+              and:
+                - fan.is_on: maxxair_fan_id
+                - switch.is_on: ceiling_fan_mode
+          then:
+            - switch.template.publish:
+                id: ceiling_fan_mode
+                state: OFF
+    on_closed:
+      then:
+        # if fan is on and ceiling fan mode is off, set state of ceiling fan mode to ON
+        - if:
+            condition:
+              and:
+                - fan.is_on: maxxair_fan_id
+                - switch.is_off: ceiling_fan_mode
+            then:
+              - switch.template.publish:
+                  id: ceiling_fan_mode
+                  state: ON
+        # if fan is off, send close command
+        - if:
+            condition:
+              and:
+                - fan.is_off: maxxair_fan_id
+            then:
+              # fan off - close lid
+              - remote_transmitter.transmit_raw:
+                  carrier_frequency: 38kHz
+                  code: [1604, -834, 778, -1646, 800, -835, 779, -1645, 802, -834, 780, -836, 1601, -834, 800, -2455, 6474, -2457, 802, -5710, 805, -1620, 5651, -858, 779, -1645, 803, -4899, 779, -2458, 4875, -834, 1604, -1645, 780, -4083, 804, -3265, 4025, -835, 2397, -1670, 2401, -1647, 1602, -3294, 7270, -1646, 1604, -3270, 2398, -1671, 3228, -859, 1577, -833, 803, -1644, 778, -8145, 800, -1646, 2402, -836, 1626, -1623, 1599, -835, 774, -861, 2400]
+
+
+switch:
+  # Auto Fan Mode
+  # Note: this switch does not have functionality on it's own, but does provide a switch to use with the Smarty Van Auto Fan automation blueprint
+  - platform: template
+    id: auto_fan
+    name: "Auto Fan"
+    icon: mdi:fan-auto
+    optimistic: true
+  
+  # Ceiling Fan Mode
+  - platform: template
+    id: ceiling_fan_mode
+    name: "Ceiling Fan Mode"
+    icon: mdi:ceiling-fan
+    optimistic: True
+    on_turn_on:
+      then:
+        # set states
+        - lambda: |-
+            auto call = id(maxxair_fan_id).make_call();
+            call.set_speed(id(maxxair_fan_id).speed);
+            call.set_direction(FanDirection::REVERSE);
+            call.perform();
+        # if fan is off, then turn fan on
+        - if:
+            condition:
+              - fan.is_off: maxxair_fan_id
+            then:
+              - fan.turn_on: maxxair_fan_id
+        - cover.template.publish:
+            id: maxxair_lid
+            state: CLOSED
+    on_turn_off: 
+      then:
+        # set states
+        - if:
+            condition:
+              - fan.is_on: maxxair_fan_id
+            then:
+              - cover.template.publish:
+                  id: maxxair_lid
+                  state: OPEN
+              - script.execute: send_speeds
+
