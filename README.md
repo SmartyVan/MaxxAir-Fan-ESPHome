@@ -37,12 +37,21 @@ The ESPHome YAML logic manages the states of all four entities based on user inp
 - When the fan is on, disabling Ceiling Fan Mode will open the lid and the fan will continue operating in REVERSE (AIR IN) 
 - Turning off Auto Fan will turn off the fan
 
+### Install ESPHome Configuration
+- To install the ESPHome configuration, create a new ESPHome deivce called " in the [ESPHome add-on](https://esphome.io/guides/getting_started_hassio.html).
+- Copy 
+
 ## Auto Fan
 The Auto Fan Automation Blueprint imitates (and improves) the MaxxAir IR remote's thermostatic control. When Auto Fan is enabled, your fan's speed will be adjusted based on configurable temperature thresholds, minimum and maximum fan speeds, and a temperature sensor of your choosing.
 
 Auto Fan never turns your fan off, only assigns speeds based on temperature. Turn off the Fan or Auto Fan to power off the Fan.
 
 *The Auto Fan Automation Blueprint can be used with any Home Assistant fan, though it will only send 10 speeds (10%, 20%, 30%, etc)*
+
+### Install Auto Fan Blueprint
+
+To install the Smarty Van Auto Fan Blueprint, navigate to your [Blueprints](https://my.home-assistant.io/redirect/blueprints/) and click the "Import Blueprint" button.
+Paste the link to the bluprint in this repo.
 
 # Hardware
 
