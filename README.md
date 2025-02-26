@@ -4,7 +4,7 @@ Control your [IR (infrared) enabled MaxxAir Fan](https://amzn.to/4gPCY9p) from H
 This ESPHome configuration and Automation Blueprint are free and open source. Consider joining a [Smarty Van YouTube Membership tier](https://www.youtube.com/channel/UCtDZoJa423TcB1ri-ZjDoqA/join) to show some love. 🥰🤓
 
 ## Watch the YouTube video about this project
-[<img width="540" alt="Smarty Van YouTube video" src="https://img.youtube.com/vi/ckXplzLgLZw/maxresdefault.jpg"/>](https://www.youtube.com/watch?v=ckXplzLgLZw)
+[<img width="540" alt="Smarty Van YouTube video" src="https://img.youtube.com/vi/eYho3RSO84E/maxresdefault.jpg"/>](https://www.youtube.com/watch?v=eYho3RSO84E)
 
 ## Project Components
 This project is made up of two parts:
