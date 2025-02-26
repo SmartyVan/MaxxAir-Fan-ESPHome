@@ -25,7 +25,7 @@ The included ESPHome configuration replicates a majority of the features availab
 - Lid Open (fan off)
 - Lid Close (fan off)
 
-**In Home Assistant, the fan direction FORWARD will equate to AIR OUT on the MaxxAir Fan and REVERSE will equate to AIR IN on the MaxxAir Fan.**
+🚨 **Home Assistant fan FORWARD = MaxxAir Fan AIR OUT — Home Assistant fan REVERSE = MaxxAir Fan AIR IN**
 
 This configuration creates 4 entities in Home Assistant:
 1. **Fan:** A 10-speed fan with forward and reverse direction
