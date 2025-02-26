@@ -80,3 +80,26 @@ Building your ESP IR device requires four items:
 - Annode of LED through resistor to 3V3
 - Cathode of LED to GPIO pin
 <img width="745" alt="Screenshot 2025-02-20 at 5 16 07 PM" src="https://github.com/user-attachments/assets/2293c199-a8dc-461a-a5ec-8d958d2c5503" />
+
+# License: Personal Use Only (Non-Commercial)
+
+This project is released under a Personal Use License, which restricts usage to non-commercial purposes only. Please read the terms carefully before using or modifying the code.
+
+## License Terms
+
+Copyright © 2025 Mike Goubeaux
+
+Permission is hereby granted to any person obtaining a copy of this software and associated documentation files (the "Software"), to use the Software solely for personal, non-commercial purposes.
+
+## Restrictions:
+
+The Software may not be used, distributed, or sold for commercial purposes without prior written permission from the copyright owner.
+Modification of the Software for personal use is allowed, but modified versions may not be distributed commercially.
+Attribution to the original author must be retained in any copy or modification of the Software.
+Disclaimer
+
+The Software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and non-infringement. In no event shall the authors be liable for any claim, damages, or other liability arising from the use of the Software.
+
+## Clarification of Non-Commercial Use
+
+Non-commercial use means the use of this software for personal purposes or academic projects, without any financial gain or benefit. If you wish to use this project for commercial purposes, please contact the author to request permission.
