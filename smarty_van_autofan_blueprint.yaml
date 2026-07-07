@@ -39,6 +39,17 @@ blueprint:
           domain:
             - input_boolean
             - switch
+    cover_sensor:
+      name: Fan Cover Sensor (Optional)
+      description: >
+        Optionally select a Binary Sensor that reports whether the fan's cover is closed.
+        When this sensor is 'on' (covered), Auto Fan Control is turned off and the fan is
+        turned off. When it turns 'off' (uncovered), Auto Fan Control is turned back on.
+        Leave empty to disable this feature.
+      default: []
+      selector:
+        entity:
+          domain: binary_sensor
     temp_sensor:
       name: Temperature Sensor
       description: "Select the sensor that provides the temperature that should be used for Auto Fan. Note: The temperature unit (°C or °F) will be derived automatically."
@@ -127,6 +138,16 @@ trigger:
     entity_id: !input fan_entity
     to: "off"
     id: off_manually
+  # Trigger when the fan cover is closed (covered).
+  - platform: state
+    entity_id: !input cover_sensor
+    to: "on"
+    id: covered
+  # Trigger when the fan cover is opened (uncovered).
+  - platform: state
+    entity_id: !input cover_sensor
+    to: "off"
+    id: uncovered
 
 condition: []  # No global conditions; branching is handled in actions.
 
@@ -135,6 +156,7 @@ action:
   - variables:
       fan_entity: !input fan_entity
       auto_fan: !input auto_fan_boolean
+      cover_sensor: !input cover_sensor
       temp_sensor: !input temp_sensor
       threshold_unit: !input threshold_unit
       low_threshold: !input low_threshold
@@ -144,6 +166,8 @@ action:
   # Compute trigger ID and current states.
   - variables:
       trig_id: "{{ trigger.id }}"
+      # True only when an optional cover sensor has been configured.
+      cover_configured: "{{ cover_sensor not in ([], none, '') }}"
       currentSpeed: "{{ state_attr(fan_entity, 'percentage') | int }}"
       currentDirection: "{{ state_attr(fan_entity, 'direction') }}"
       raw_temp: "{{ states(temp_sensor) | float }}"
@@ -188,6 +212,49 @@ action:
           {{ (((sensor_val - low) / (high - low)) * (max_speed_val - min_speed_val) + min_speed_val) | round(0) | int }}
         {% endif %}
   - choose:
+      # Branch 0a: If the fan cover was closed (covered), turn the fan off and disable auto fan control.
+      - conditions:
+          - condition: template
+            value_template: "{{ trig_id == 'covered' }}"
+        sequence:
+          - service: fan.turn_off
+            target:
+              entity_id: !input fan_entity
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ auto_fan.startswith('input_boolean.') }}"
+                sequence:
+                  - service: input_boolean.turn_off
+                    target:
+                      entity_id: "{{ auto_fan }}"
+              - conditions:
+                  - condition: template
+                    value_template: "{{ auto_fan.startswith('switch.') }}"
+                sequence:
+                  - service: switch.turn_off
+                    target:
+                      entity_id: "{{ auto_fan }}"
+      # Branch 0b: If the fan cover was opened (uncovered), enable auto fan control.
+      - conditions:
+          - condition: template
+            value_template: "{{ trig_id == 'uncovered' }}"
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ auto_fan.startswith('input_boolean.') }}"
+                sequence:
+                  - service: input_boolean.turn_on
+                    target:
+                      entity_id: "{{ auto_fan }}"
+              - conditions:
+                  - condition: template
+                    value_template: "{{ auto_fan.startswith('switch.') }}"
+                sequence:
+                  - service: switch.turn_on
+                    target:
+                      entity_id: "{{ auto_fan }}"
       # Branch 1: If auto fan control was turned off by a user, then turn the fan off.
       - conditions:
           - condition: template
@@ -243,6 +310,9 @@ action:
       # Continue only if auto fan control is on.
       - condition: template
         value_template: "{{ is_state(auto_fan, 'on') }}"
+      # And, if a cover sensor is configured, only when the cover is off (uncovered).
+      - condition: template
+        value_template: "{{ not cover_configured or is_state(cover_sensor, 'off') }}"
       - choose:
           # Update the fan speed if the computed percentage differs from the current percentage,
           # or if auto mode was just turned on.
