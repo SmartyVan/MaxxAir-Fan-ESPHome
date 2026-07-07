@@ -62,6 +62,17 @@ Auto Fan never turns your fan off, only assigns speeds based on temperature. Tur
 
 *The Auto Fan Automation Blueprint can be used with any Home Assistant fan, though it will only send 10 speeds (10%, 20%, 30%, etc)*
 
+### Optional: Fan Cover Sensor
+
+The blueprint includes an optional **Fan Cover Sensor** input. Select a `binary_sensor` that reports whether the fan's cover/lid is closed, and Auto Fan will respond automatically:
+
+- **Covered:** Auto Fan Control and the fan are turned **off** (so the fan won't run against a closed cover).
+- **Uncovered:** Auto Fan Control is turned back **on**, resuming thermostatic speed control.
+
+By default the sensor's `on` state is treated as *covered* and `off` as *uncovered*. If your sensor is reversed—for example a door/window sensor (device_class `door` or `opening`) that reports `on` when **open**—enable the **Invert Cover Sensor** option to flip the interpretation.
+
+Leave the Fan Cover Sensor empty to disable this feature entirely; existing automations are unaffected.
+
 ### Install Auto Fan Blueprint
 
 To install the Smarty Van Auto Fan Blueprint, navigate to your Home Assistant [Blueprints](https://my.home-assistant.io/redirect/blueprints/) and click the "Import Blueprint" button.
