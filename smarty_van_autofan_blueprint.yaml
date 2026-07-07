@@ -14,13 +14,20 @@ blueprint:
     2. Manually control the `Fan` (speed, on/off) to disable `Auto Fan Control` and begin full manual control. 
     3. Turn on `Auto Fan Control` to turn your fan on and begin automatic speed control.
     4. If `Auto Fan Control` is on, turn it off to turn the `Fan` off.
-    
+
+    ### Optional: Fan Cover Sensor
+
+    Optionally select a `binary_sensor` that reports whether the fan's cover/lid is closed. When **covered**, `Auto Fan Control` and the `Fan` are turned off; when **uncovered**, `Auto Fan Control` is turned back on to resume automatic speed control.
+
+    By default, the sensor's `on` state is treated as *covered* and `off` as *uncovered*. If your sensor is reversed — for example a door/window sensor (device_class `door` or `opening`) that reports `on` when **open** — enable `Invert Cover Sensor` to flip the interpretation. Leave `Fan Cover Sensor` empty to disable this feature.
+
     ### Notes
     
     - If needed, create an [input_boolean helper](https://www.home-assistant.io/integrations/input_boolean/) to use for `Auto Fan Control` (this can be done in *Settings -> Devices & Services -> Helpers*)
     - The `Fan` speed will be updated only when the `Auto Fan Control` (input boolean or switch) is on and when the `Temperature Sensor` entity's state updates
     - `Auto Fan Control` will only turn your `Fan` off if you turn `Auto Fan Control` off
-    
+    - If a `Fan Cover Sensor` is configured, temperature-driven speed changes are suppressed while the cover is closed
+
     **Created by:** [Smarty Van](https://www.youtube.com/@SmartyVan)
   domain: automation
   author: Smarty Van
